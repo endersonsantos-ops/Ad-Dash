@@ -1,11 +1,9 @@
-import { ProcessedAd } from '../types';
 
-// O caminho acima assume que 'utils' está dentro de 'src' ou similar. 
-// Como o projeto é plano, ajustamos para './types' se necessário, 
-// mas mantivemos a lógica de limpeza de dados.
+import { ProcessedAd } from '../types';
 
 const parseBRL = (val: string): number => {
   if (!val) return 0;
+  // Remove R$, pontos de milhar, espaços e converte vírgula decimal para ponto
   const clean = val.replace(/R\$\s?/, '').replace(/\./g, '').replace(',', '.').replace(/%/g, '').trim();
   const num = parseFloat(clean);
   return isNaN(num) ? 0 : num;
@@ -16,6 +14,7 @@ export const parseCSVData = (csvContent: string): ProcessedAd[] => {
   const dataRows = lines.slice(1);
 
   return dataRows.map(row => {
+    // Regex para lidar com campos CSV que podem conter vírgulas dentro de aspas
     const regex = /(?:^|,)(?:"([^"]*(?:""[^"]*)*)"|([^",]*))/g;
     const parts: string[] = [];
     let match;
@@ -31,6 +30,7 @@ export const parseCSVData = (csvContent: string): ProcessedAd[] => {
     const clicks = parseBRL(parts[2]);
     const spend = parseBRL(parts[10]);
 
+    // Extração do Designer
     let designer = 'Não Identificado';
     const names = ['Gabriel Barboza', 'Vinicius Carvalho', 'Guilherme Martins', 'Laysa Diniz', 'Gustavo Costa', 'Matheus Subires', 'Ender', 'Lucas Botelho', 'Júlia Lopes', 'Yuri Brandão', 'Lucas Sasaki'];
     for (const name of names) {
@@ -40,6 +40,7 @@ export const parseCSVData = (csvContent: string): ProcessedAd[] => {
       }
     }
 
+    // Extração do Formato
     let format = 'Geral';
     const formatKeywords = [
       'Mudança Avatar', 'Criativo Novo', 'Novo Hook', 'Variação de Vídeo', 
@@ -53,13 +54,16 @@ export const parseCSVData = (csvContent: string): ProcessedAd[] => {
       }
     }
 
+    // Extração e Normalização do Funil
     const funnelMatches = adName.match(/\[([^\]]*?F\d{2,4}[^\]]*?)\]/gi);
     let funnel = 'Geral / Outros';
     
     if (funnelMatches) {
+        // Pega o bloco estrutural (ex: F210, F229)
         const structuralFunnel = funnelMatches.find(m => !m.includes('#') && m.length > 5);
         let extracted = structuralFunnel ? structuralFunnel.replace(/[\[\]]/g, '') : funnelMatches[0].replace(/[\[\]]/g, '');
         
+        // Requisito: Unificar FTB_INTER-F210-2025-AQS em GLT_INTER-F210-2026
         if (extracted === 'FTB_INTER-F210-2025-AQS') {
             extracted = 'GLT_INTER-F210-2026';
         }
